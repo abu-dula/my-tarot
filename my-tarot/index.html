@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阿布的塔罗</title>
+    <style>
+        :root {
+            --bg-deep: #1a0c2a;
+            --bg-card: #1e1035;
+            --bg-input: #251540;
+            --gold: #d4b06a;
+            --gold-light: #e8d5a3;
+            --gold-dim: #a08050;
+            --text-warm: #f0e6d8;
+            --text-dim: #c4b8a0;
+            --glow-soft: rgba(210, 170, 100, 0.25);
+            --glow-strong: rgba(230, 190, 120, 0.55);
+            --glow-pulse: rgba(240, 200, 140, 0.7);
+            --border-gold: #3a2a15;
+            --shadow-card: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(180, 140, 80, 0.2);
+            --transition-smooth: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-glow: 0.6s cubic-bezier(0.25, 0.8, 0.25, 1.2);
+            --card-back-bg: #1a0e30;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Serif SC', 'PingFang SC', 'STSong', 'Georgia', serif;
+            background: var(--bg-deep);
+            color: var(--text-warm);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: background var(--transition-smooth);
+        }
+
+        .tarot-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 0; overflow: hidden;
+        }
+        .tarot-symbol {
+            position: absolute; font-size: 2rem; opacity: 0.1;
+            animation: floatSymbol var(--dur) ease-in-out infinite;
+            animation-delay: var(--delay);
+            filter: blur(0.5px);
+        }
+        @keyframes floatSymbol {
+            0%,100% { transform: translateY(0) translateX(0) rotate(0deg); }
+            25% { transform: translateY(-18px) translateX(6px) rotate(2deg); }
+            50% { transform: translateY(-6px) translateX(12px) rotate(-3deg); }
+            75% { transform: translateY(-22px) translateX(-4px) rotate(1deg); }
+        }
+        .star-particle {
+            position: absolute; width: 2px; height: 2px;
+            background: var(--gold-light); border-radius: 50%; opacity: 0;
+            animation: twinkle var(--twinkle-dur) ease-in-out infinite;
+            animation-delay: var(--twinkle-delay);
+            box-shadow: 0 0 6px var(--glow-soft);
+        }
+        @keyframes twinkle {
+            0%,100% { opacity: 0.12; }
+            50% { opacity: 0.65; }
+        }
+
+        .main-container {
+            position: relative; z-index: 1;
+            width: 100%; max-width: 500px;
+            padding: 20px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+
+        .page-card {
+            background: var(--bg-card);
+            border-radius: 22px; padding: 34px 28px;
+            box-shadow: var(--shadow-card);
+            border: 1px solid var(--border-gold);
+            width: 100%;
+            transition: all var(--transition-smooth);
+            position: relative; text-align: center;
+            animation: cardAppear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes cardAppear {
+            from { opacity: 0; transform: translateY(24px) scale(0.94); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .page-card.card-exit {
+            animation: cardExit 0.35s ease forwards;
+        }
+        @keyframes cardExit {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.92) translateY(-10px); }
+        }
+
+        .empress-frame {
+            display: inline-flex; align-items: center; justify-content: center; flex-direction: column;
+            margin: 0 auto 20px; width: 120px; height: 160px; border-radius: 14px;
+            background: linear-gradient(145deg, #2a1840 0%, #1e0f30 40%, #261535 100%);
+            border: 2.5px solid var(--gold-dim);
+            box-shadow: 0 0 30px var(--glow-soft), 0 4px 20px rgba(0,0,0,0.4);
+            transition: all var(--transition-glow);
+        }
+        .empress-crown { font-size: 2.4rem; animation: crownGlow 3s ease-in-out infinite; }
+        @keyframes crownGlow {
+            0%,100% { filter: drop-shadow(0 0 6px rgba(220,180,100,0.5)); }
+            50% { filter: drop-shadow(0 0 16px rgba(240,200,130,0.85)); }
+        }
+        .empress-symbol { font-size: 2.8rem; animation: symbolPulse 4s ease-in-out infinite; }
+        @keyframes symbolPulse {
+            0%,100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.06); }
+        }
+        .empress-label { font-size: 0.6rem; letter-spacing: 0.14em; color: var(--gold-dim); margin-top: 4px; }
+
+        .page-title { font-size: 1.5rem; font-weight: 600; letter-spacing: 0.04em; color: var(--gold-light); margin-bottom: 4px; }
+        .page-subtitle { font-size: 0.8rem; color: var(--text-dim); letter-spacing: 0.06em; margin-bottom: 20px; font-weight: 300; }
+
+        .btn-glow {
+            position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 15px 32px; border-radius: 40px;
+            font-size: 1rem; font-weight: 500; letter-spacing: 0.05em;
+            cursor: pointer;
+            border: 1.5px solid var(--gold-dim);
+            background: rgba(30,14,50,0.7); color: var(--gold-light);
+            font-family: inherit;
+            transition: all var(--transition-glow);
+            outline: none; -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 0 12px var(--glow-soft), 0 2px 8px rgba(0,0,0,0.3);
+            overflow: hidden; white-space: nowrap;
+        }
+        .btn-glow:hover {
+            border-color: var(--gold-light);
+            box-shadow: 0 0 28px var(--glow-strong), 0 4px 16px rgba(0,0,0,0.4);
+            color: #f5e8c8; transform: translateY(-1px);
+            background: rgba(35,18,55,0.85);
+        }
+        .btn-glow:active {
+            transform: scale(0.96);
+            box-shadow: 0 0 40px var(--glow-pulse), 0 0 20px var(--glow-strong);
+            border-color: #f0d090;
+            transition: 0.1s ease;
+        }
+        .btn-glow.glow-flash { animation: btnFlash 0.9s ease-out; }
+        @keyframes btnFlash {
+            0% { box-shadow: 0 0 50px var(--glow-pulse), 0 0 30px rgba(250,210,150,0.9); border-color: #f8dda0; }
+            40% { box-shadow: 0 0 35px var(--glow-strong), 0 0 18px rgba(240,190,130,0.7); }
+            100% { box-shadow: 0 0 12px var(--glow-soft); border-color: var(--gold-dim); }
+        }
+        .btn-glow.full-width { width: 100%; justify-content: center; }
+        .btn-glow .btn-icon { font-size: 1.3rem; transition: transform 0.4s ease; }
+        .btn-glow:hover .btn-icon { transform: scale(1.2); }
+        .btn-glow:disabled { opacity: 0.45; pointer-events: none; cursor: not-allowed; }
+
+        .btn-stack { display: flex; flex-direction: column; gap: 14px; width: 100%; max-width: 320px; margin: 0 auto; }
+        .btn-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+        .input-group { margin-bottom: 16px; text-align: left; }
+        .input-label { display: block; font-size: 0.78rem; color: var(--gold-dim); letter-spacing: 0.06em; margin-bottom: 6px; padding-left: 8px; }
+        .input-field {
+            width: 100%; padding: 13px 18px;
+            border: 1.5px solid var(--border-gold); border-radius: 14px;
+            font-size: 0.95rem; background: var(--bg-input); color: var(--text-warm);
+            outline: none; transition: all 0.4s ease;
+            letter-spacing: 0.03em; font-family: inherit;
+            -webkit-appearance: none; caret-color: var(--gold-light);
+        }
+        .input-field:focus {
+            border-color: var(--gold-light);
+            box-shadow: 0 0 18px var(--glow-soft), 0 0 0 3px rgba(180,140,80,0.08);
+            background: #2a1a48;
+        }
+        .input-field.error-shake { animation: shake 0.5s ease; border-color: #c06070 !important; }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+        textarea.input-field { resize: none; min-height: 90px; line-height: 1.6; }
+        .error-hint { color: #c07080; font-size: 0.7rem; margin-top: 4px; opacity: 0; transition: opacity 0.3s ease; padding-left: 8px; min-height: 16px; }
+        .error-hint.show { opacity: 1; }
+
+        .draw-area { position: relative; width: 100%; min-height: 340px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .card-pile-container { position: relative; width: 200px; height: 280px; margin: 0 auto 20px; cursor: pointer; transition: transform 0.3s ease; }
+        .card-pile-container:hover { transform: scale(1.03); }
+        .pile-glow { position: absolute; inset: -20px; border-radius: 50%; background: radial-gradient(circle, var(--glow-pulse) 0%, transparent 70%); opacity: 0.35; animation: pileGlowPulse 2.5s ease-in-out infinite; pointer-events: none; }
+        @keyframes pileGlowPulse { 0%,100% { opacity: 0.25; transform: scale(1); } 50% { opacity: 0.55; transform: scale(1.12); } }
+        .pile-card { position: absolute; width: 110px; height: 170px; border-radius: 10px; background: var(--card-back-bg); border: 2px solid var(--gold-dim); box-shadow: 0 4px 18px rgba(0,0,0,0.5); left: 50%; top: 50%; margin-left: -55px; margin-top: -85px; transform-origin: center center; transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1); display: flex; align-items: center; justify-content: center; backface-visibility: hidden; }
+        .pile-card .card-back-design { text-align: center; pointer-events: none; }
+        .pile-card .card-back-design .star-main { font-size: 2.6rem; display: block; animation: starTwinkle 2s ease-in-out infinite; }
+        @keyframes starTwinkle { 0%,100% { opacity: 0.7; } 50% { opacity: 1; } }
+        .pile-card .card-back-design .moon-small { font-size: 1rem; opacity: 0.6; letter-spacing: 0.2em; }
+        .draw-hint { color: var(--gold-light); font-size: 0.85rem; letter-spacing: 0.06em; animation: hintPulse 2s ease-in-out infinite; margin-top: 8px; }
+        @keyframes hintPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+        .draw-counter { color: var(--text-dim); font-size: 0.75rem; margin-top: 4px; letter-spacing: 0.05em; }
+
+        .flying-card { position: fixed; z-index: 300; width: 110px; height: 170px; border-radius: 10px; pointer-events: none; transition: all 0.7s cubic-bezier(0.25,0.8,0.25,1.2); box-shadow: 0 8px 30px rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; text-align: center; }
+        .flying-card.flipping { animation: flipCard 0.7s ease forwards; }
+        @keyframes flipCard { 0% { transform: rotateY(0deg) scale(1); } 50% { transform: rotateY(90deg) scale(1.15); } 100% { transform: rotateY(180deg) scale(1); } }
+
+        .result-slots { display: flex; gap: 10px; justify-content: center; width: 100%; margin: 10px 0; flex-wrap: wrap; }
+        .result-slot { width: 90px; min-height: 145px; border: 2px dashed var(--border-gold); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: all 0.5s ease; background: rgba(30,14,50,0.5); position: relative; padding: 8px; }
+        .result-slot.filled { border-style: solid; border-color: var(--gold-light); box-shadow: 0 0 20px var(--glow-soft); background: rgba(35,18,55,0.8); }
+        .result-slot .slot-label { font-size: 0.6rem; color: var(--gold-dim); letter-spacing: 0.1em; margin-bottom: 4px; }
+        .result-slot .slot-card-emoji { font-size: 2rem; }
+        .result-slot .slot-card-name { font-size: 0.6rem; color: var(--text-dim); margin-top: 4px; line-height: 1.2; text-align: center; }
+        .result-slot .reversed-tag { color: #c08090; font-size: 0.5rem; position: absolute; top: 6px; right: 8px; }
+
+        .reading-area { background: rgba(40,24,60,0.7); border: 1px solid rgba(180,140,80,0.3); border-radius: 14px; padding: 16px; margin-top: 12px; text-align: left; line-height: 1.7; font-size: 0.85rem; animation: bubbleIn 0.5s ease; max-height: 240px; overflow-y: auto; }
+        @keyframes bubbleIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+        .reading-area .reading-title { color: var(--gold-light); font-weight: 600; letter-spacing: 0.04em; margin-bottom: 8px; font-size: 0.9rem; text-align: center; }
+        .reading-area::-webkit-scrollbar { width: 3px; } .reading-area::-webkit-scrollbar-thumb { background: var(--border-gold); border-radius: 3px; }
+
+        .chat-area { text-align: left; max-height: 300px; overflow-y: auto; padding-right: 4px; margin-bottom: 12px; scroll-behavior: smooth; }
+        .chat-area::-webkit-scrollbar { width: 3px; } .chat-area::-webkit-scrollbar-thumb { background: var(--border-gold); border-radius: 3px; }
+        .chat-bubble { padding: 12px 16px; border-radius: 14px; margin-bottom: 8px; line-height: 1.7; font-size: 0.85rem; animation: bubbleIn 0.4s ease; }
+        .chat-bubble.ai { background: rgba(40,24,60,0.8); border: 1px solid rgba(180,140,80,0.3); color: var(--text-warm); }
+        .chat-bubble.user { background: rgba(60,35,80,0.6); border: 1px solid rgba(160,120,180,0.3); color: #e8d8f0; text-align: right; }
+        .chat-bubble .bubble-label { font-size: 0.6rem; letter-spacing: 0.08em; color: var(--gold-dim); margin-bottom: 2px; display: block; }
+
+        .farewell-overlay, .last-reading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10,5,20,0.9); z-index: 400;
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+            animation: fadeInOverlay 0.6s ease;
+            backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        }
+        @keyframes fadeInOverlay { from { opacity: 0; } to { opacity: 1; } }
+        .farewell-card, .last-reading-card {
+            text-align: center; padding: 40px 30px;
+            background: var(--bg-card); border-radius: 20px;
+            border: 1px solid var(--border-gold);
+            box-shadow: 0 0 60px var(--glow-soft);
+            animation: popInFarewell 0.7s cubic-bezier(0.34,1.56,0.64,1);
+            max-width: 400px; width: 90%;
+        }
+        @keyframes popInFarewell { from { transform: scale(0.8) translateY(30px); opacity: 0; } to { transform: scale(1) translateY(0); opacity: 1; } }
+        .farewell-emoji { font-size: 3.5rem; animation: gentleBounce 2s ease-in-out infinite; }
+        @keyframes gentleBounce { 0%,100% { transform: translateY(0); } 30% { transform: translateY(-14px); } 60% { transform: translateY(-4px); } }
+        .farewell-text { font-size: 1.3rem; color: var(--gold-light); letter-spacing: 0.04em; margin: 10px 0; font-weight: 500; line-height: 1.6; }
+
+        .hidden { display: none !important; }
+
+        /* 底部声明 */
+        .site-footer {
+            width: 100%; max-width: 500px; padding: 20px; position: relative; z-index: 1;
+            text-align: center; font-size: 0.7rem; color: var(--text-dim);
+            margin-top: 10px;
+        }
+        .footer-details { margin: 0 auto; display: inline-block; }
+        .footer-details summary {
+            cursor: pointer; padding: 8px 20px; border-radius: 20px;
+            background: rgba(30,14,50,0.5); border: 1px solid var(--border-gold);
+            color: var(--gold-dim); font-size: 0.75rem; letter-spacing: 0.05em;
+            list-style: none; transition: all 0.3s ease;
+        }
+        .footer-details summary::-webkit-details-marker { display: none; }
+        .footer-details summary:hover { color: var(--gold-light); border-color: var(--gold-light); }
+        .footer-content {
+            background: rgba(30,14,50,0.6); border-radius: 12px;
+            padding: 12px 16px; margin-top: 8px;
+            border: 1px solid rgba(180,140,80,0.2);
+            line-height: 1.8; text-align: left;
+        }
+        .footer-content h4 { color: var(--gold-light); margin: 10px 0 4px; font-size: 0.8rem; }
+        .footer-content p, .footer-content li { font-size: 0.7rem; margin: 4px 0; }
+        .footer-content ul { padding-left: 16px; list-style-type: none; }
+        .footer-content ul li::before { content: "·"; color: var(--gold-dim); margin-right: 6px; }
+
+        @media (max-width: 440px) {
+            .page-card { padding: 20px 14px; border-radius: 16px; }
+            .empress-frame { width: 80px; height: 110px; border-radius: 10px; margin-bottom: 12px; }
+            .empress-crown { font-size: 1.6rem; }
+            .empress-symbol { font-size: 1.9rem; }
+            .page-title { font-size: 1.2rem; }
+            .btn-glow { padding: 12px 20px; font-size: 0.85rem; border-radius: 34px; }
+            .pile-card { width: 85px; height: 130px; margin-left: -42px; margin-top: -65px; border-radius: 8px; }
+            .result-slot { width: 72px; min-height: 115px; }
+            .result-slots { gap: 6px; }
+            .card-pile-container { width: 160px; height: 220px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="tarot-bg" id="tarotBg"></div>
+
+    <div class="main-container" id="mainContainer">
+        <!-- 首页 -->
+        <div class="page-card" id="homePage">
+            <div class="empress-frame">
+                <span class="empress-crown">👑</span>
+                <span class="empress-symbol">👸✨</span>
+                <span class="empress-label">III · EMPRESS</span>
+            </div>
+            <h1 class="page-title">我自己的塔罗</h1>
+            <p class="page-subtitle">皇后牌灵 · 倾听你的心声</p>
+            <div class="btn-stack">
+                <button class="btn-glow full-width" id="btnSummon"><span class="btn-icon">🔮</span> 召唤牌灵</button>
+                <button class="btn-glow full-width hidden" id="btnLastReading"><span class="btn-icon">📖</span> 查看上次解读</button>
+                <button class="btn-glow full-width" id="btnFarewellHome"><span class="btn-icon">🌙</span> 告别牌灵</button>
+            </div>
+        </div>
+
+        <!-- 信息采集页 -->
+        <div class="page-card hidden" id="inputPage">
+            <div class="empress-frame" style="width:70px;height:95px;border-radius:10px;margin-bottom:10px;">
+                <span class="empress-crown" style="font-size:1.3rem;">👑</span>
+                <span class="empress-symbol" style="font-size:1.6rem;">👸</span>
+                <span class="empress-label" style="font-size:0.45rem;">聆听中...</span>
+            </div>
+            <h1 class="page-title" style="font-size:1.3rem;">牌灵在聆听</h1>
+            <p class="page-subtitle">请告诉我关于你的事</p>
+            <div class="input-group">
+                <label class="input-label">🌿 你的性别</label>
+                <input type="text" class="input-field" id="inputGender" placeholder="例如：女 / 男 / 其他" maxlength="20" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label class="input-label">📅 你的生日</label>
+                <input type="text" class="input-field" id="inputBirthday" placeholder="例如：1995年6月15日" maxlength="30" autocomplete="off">
+            </div>
+            <div class="input-group">
+                <label class="input-label">💭 你想问的问题</label>
+                <textarea class="input-field" id="inputQuestion" placeholder="请在此写下你心中的困惑..." maxlength="300"></textarea>
+            </div>
+            <div class="error-hint" id="errorGlobal"></div>
+            <div class="btn-row" style="gap:10px;">
+                <button class="btn-glow" id="btnBackHome" style="flex:1;">← 返回</button>
+                <button class="btn-glow" id="btnConfirm" style="flex:2;">✨ 确认并抽牌咨询</button>
+            </div>
+        </div>
+
+        <!-- 抽牌页 -->
+        <div class="page-card hidden" id="drawPage">
+            <h1 class="page-title" style="font-size:1.2rem;">🃏 抽取你的三张牌</h1>
+            <p class="page-subtitle" style="margin-bottom:8px;">牌灵已将塔罗牌摆成环形 · 点击抽取</p>
+            <div class="draw-area">
+                <div class="card-pile-container" id="cardPileContainer">
+                    <div class="pile-glow"></div>
+                </div>
+                <p class="draw-hint" id="drawHint">👆 点击牌堆抽取第一张牌</p>
+                <p class="draw-counter" id="drawCounter">剩余抽取：3 张</p>
+            </div>
+            <div class="result-slots" id="resultSlots">
+                <div class="result-slot" id="slotPast"><span class="slot-label">🌅 过去</span><span style="font-size:1.4rem;opacity:0.3;">🃏</span></div>
+                <div class="result-slot" id="slotPresent"><span class="slot-label">🌞 现在</span><span style="font-size:1.4rem;opacity:0.3;">🃏</span></div>
+                <div class="result-slot" id="slotFuture"><span class="slot-label">🌙 未来</span><span style="font-size:1.4rem;opacity:0.3;">🃏</span></div>
+            </div>
+            <div class="reading-area hidden" id="readingArea"></div>
+            <div class="btn-row hidden" id="drawActions" style="margin-top:12px;gap:10px;">
+                <button class="btn-glow" id="btnFollowUpDraw"><span class="btn-icon">💬</span> 追问牌灵</button>
+                <button class="btn-glow" id="btnFarewellDraw"><span class="btn-icon">🌙</span> 告别牌灵</button>
+            </div>
+        </div>
+
+        <!-- 对话页 -->
+        <div class="page-card hidden" id="chatPage">
+            <div class="empress-frame" style="width:60px;height:80px;border-radius:8px;margin-bottom:8px;">
+                <span class="empress-crown" style="font-size:1rem;">👑</span>
+                <span class="empress-symbol" style="font-size:1.2rem;">👸</span>
+                <span class="empress-label" style="font-size:0.4rem;">对话中</span>
+            </div>
+            <h1 class="page-title" style="font-size:1.1rem;">牌灵的启示</h1>
+            <div class="chat-area" id="chatArea"></div>
+            <div id="chatActions"></div>
+        </div>
+    </div>
+
+    <!-- 上次解读覆盖层 -->
+    <div class="last-reading-overlay hidden" id="lastReadingOverlay">
+        <div class="last-reading-card" style="text-align:left; max-height:80vh; overflow-y:auto; padding:20px;">
+            <h3 style="color:var(--gold-light); text-align:center;">📖 上一次的牌阵解读</h3>
+            <div id="lastReadingContent" style="margin:15px 0; font-size:0.85rem; line-height:1.7;"></div>
+            <div class="btn-row"><button class="btn-glow" id="btnCloseLastReading">✨ 关闭</button></div>
+        </div>
+    </div>
+
+    <!-- 告别覆盖层 -->
+    <div class="farewell-overlay hidden" id="farewellOverlay">
+        <div class="farewell-card">
+            <div class="farewell-emoji" id="farewellEmoji">💫</div>
+            <div class="farewell-text" id="farewellText"></div>
+            <button class="btn-glow" id="btnFarewellClose" style="margin-top:16px;">✨ 好的，再见</button>
+        </div>
+    </div>
+
+    <!-- 底部声明 -->
+    <footer class="site-footer">
+        <details class="footer-details">
+            <summary>📜 隐私声明 & 免责声明</summary>
+            <div class="footer-content">
+                <h4>🔒 隐私声明</h4>
+                <ul>
+                    <li>1. 本网站尊重并保护所有访问者的隐私，不会主动收集、存储或向第三方提供任何可识别的个人信息（包括但不限于姓名、手机号、地址等）。</li>
+                    <li>2. 本网站仅可能通过基础的访问日志（如 IP 地址、浏览器类型）进行匿名化的流量统计，用于优化网站体验，该数据无法识别到具体个人。</li>
+                    <li>3. 本网站后端调用第三方 AI 服务时，<strong>仅传输用户主动输入的对话内容及抽牌结果</strong>用于生成 AI 回复，不会传输任何个人身份信息。传输的对话内容不会被第三方用于其他用途。</li>
+                    <li>4. 若本网站后续调整隐私政策，将在本页面更新，更新后的政策自发布之日起生效。</li>
+                </ul>
+                <h4>⚠️ 免责声明</h4>
+                <ul>
+                    <li>1. 本网站所有塔罗牌相关内容、抽卡结果及 AI 生成的对话，均仅为<strong>娱乐用途</strong>，不构成任何形式的专业建议（包括但不限于心理咨询、医疗建议、法律意见、决策指导、运势预测等）。</li>
+                    <li>2. 本网站内容不具有任何科学依据，仅供个人娱乐体验，请勿将其作为生活、工作、情感、投资等方面的决策依据。</li>
+                    <li>3. 因用户自行参考或采信本网站内容所做出的任何决定及产生的任何直接或间接后果，均由用户本人承担，本网站及运营者不承担任何法律责任。</li>
+                    <li>4. 本网站为纯免费个人项目，不提供任何付费内容，也不接受任何形式的付费，包括但不限于充值、打赏、捐赠、付费咨询等。所有功能均免费开放，不存在任何付费解锁、付费增值服务。</li>
+                    <li>5. 本网站保留随时修改、更新或终止部分或全部服务的权利，恕不另行通知。</li>
+                </ul>
+            </div>
+        </details>
+    </footer>
+
+    <script>
+        (function() {
+            // ==================== API 调用函数 ====================
+            async function callDeepSeekAPI(messages) {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: messages,
+                        temperature: 0.9,
+                        max_tokens: 500
+                    })
+                });
+                if (!response.ok) {
+                    const err = await response.json().catch(() => ({}));
+                    throw new Error(err.error || '请求失败');
+                }
+                return await response.json();
+            }
+
+            // ==================== DOM元素 ====================
+            const homePage = document.getElementById('homePage');
+            const inputPage = document.getElementById('inputPage');
+            const drawPage = document.getElementById('drawPage');
+            const chatPage = document.getElementById('chatPage');
+            const cardPileContainer = document.getElementById('cardPileContainer');
+            const drawHint = document.getElementById('drawHint');
+            const drawCounter = document.getElementById('drawCounter');
+            const readingArea = document.getElementById('readingArea');
+            const drawActions = document.getElementById('drawActions');
+            const slotPast = document.getElementById('slotPast');
+            const slotPresent = document.getElementById('slotPresent');
+            const slotFuture = document.getElementById('slotFuture');
+            const chatArea = document.getElementById('chatArea');
+            const chatActions = document.getElementById('chatActions');
+            const errorGlobal = document.getElementById('errorGlobal');
+            const farewellOverlay = document.getElementById('farewellOverlay');
+            const farewellEmoji = document.getElementById('farewellEmoji');
+            const farewellText = document.getElementById('farewellText');
+            const btnFarewellClose = document.getElementById('btnFarewellClose');
+            const btnLastReading = document.getElementById('btnLastReading');
+            const lastReadingOverlay = document.getElementById('lastReadingOverlay');
+            const lastReadingContent = document.getElementById('lastReadingContent');
+            const btnCloseLastReading = document.getElementById('btnCloseLastReading');
+            const tarotBg = document.getElementById('tarotBg');
+
+            let userInfo = {};
+            let drawnCards = [];
+            let drawCount = 0;
+            let chatHistory = [];
+            let hasActiveSession = false;
+            let currentPage = homePage;
+
+            // 存储上次会话
+            let lastSession = null;
+
+            // ============ 页面切换（修复重叠） ============
+            function switchPage(toPage) {
+                const fromPage = currentPage;
+                if (fromPage && fromPage !== toPage && !fromPage.classList.contains('hidden')) {
+                    fromPage.classList.add('card-exit');
+                    setTimeout(() => {
+                        fromPage.classList.add('hidden');
+                        fromPage.classList.remove('card-exit');
+                        toPage.classList.remove('hidden');
+                        toPage.style.animation = 'none';
+                        void toPage.offsetWidth;
+                        toPage.style.animation = 'cardAppear 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+                    }, 340);
+                } else {
+                    toPage.classList.remove('hidden');
+                    toPage.style.animation = 'none';
+                    void toPage.offsetWidth;
+                    toPage.style.animation = 'cardAppear 0.6s cubic-bezier(0.34,1.56,0.64,1)';
+                }
+                currentPage = toPage;
+            }
+
+            // ============ 上次解读覆盖层 ============
+            btnCloseLastReading.addEventListener('click', () => {
+                lastReadingOverlay.classList.add('hidden');
+            });
+
+            btnLastReading.addEventListener('click', () => {
+                if (lastSession) {
+                    lastReadingContent.innerHTML = lastSession.content;
+                    lastReadingOverlay.classList.remove('hidden');
+                }
+            });
+
+            // ============ 背景生成 ============
+            function createTarotBackground() {
+                const symbols = ['✨','🌙','☀️','⭐','🔮','💫','🌟','🕯️','🌿','🪐','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🏆','⚔️','🛡️','💎','🌸','🌹','🍷','🔔'];
+                const fragment = document.createDocumentFragment();
+                for (let i = 0; i < 30; i++) {
+                    const el = document.createElement('span');
+                    el.className = 'tarot-symbol';
+                    el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+                    el.style.left = Math.random() * 92 + '%';
+                    el.style.top = Math.random() * 92 + '%';
+                    el.style.fontSize = (1 + Math.random() * 3) + 'rem';
+                    el.style.setProperty('--dur', (8 + Math.random() * 22) + 's');
+                    el.style.setProperty('--delay', Math.random() * 10 + 's');
+                    fragment.appendChild(el);
+                }
+                for (let i = 0; i < 35; i++) {
+                    const p = document.createElement('span');
+                    p.className = 'star-particle';
+                    p.style.left = Math.random() * 96 + '%';
+                    p.style.top = Math.random() * 96 + '%';
+                    p.style.width = (1 + Math.random() * 2.5) + 'px';
+                    p.style.height = p.style.width;
+                    p.style.setProperty('--twinkle-dur', (2 + Math.random() * 6) + 's');
+                    p.style.setProperty('--twinkle-delay', Math.random() * 8 + 's');
+                    fragment.appendChild(p);
+                }
+                tarotBg.appendChild(fragment);
+            }
+
+            function triggerGlowFlash(btn) {
+                btn.classList.remove('glow-flash');
+                void btn.offsetWidth;
+                btn.classList.add('glow-flash');
+                setTimeout(() => btn.classList.remove('glow-flash'), 950);
+            }
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.btn-glow');
+                if (btn && !btn.disabled) triggerGlowFlash(btn);
+            });
+
+            // ============ 塔罗牌库 ============
+            const tarotDeck = [
+                { id:0,name:'愚者',en:'The Fool',emoji:'🧑‍🎤',keywords:['开始','冒险','天真','自由','未知','旅程','新起点'],meaning:'愚者代表新的开始与无限可能。你正站在一段崭新旅程的起点，带着天真与勇气。它提醒你放下顾虑，大胆迈出第一步。' },
+                { id:1,name:'魔术师',en:'The Magician',emoji:'🧙',keywords:['创造','技能','资源','行动','自信','实现','力量'],meaning:'魔术师象征着你拥有实现目标所需的一切资源与能力。现在是行动的时刻，集中你的意志，将想法化为现实。' },
+                { id:2,name:'女祭司',en:'The High Priestess',emoji:'🧘',keywords:['直觉','潜意识','智慧','神秘','内省','等待','秘密'],meaning:'女祭司召唤你倾听内心的声音。有些答案无法从外界获取，需要你静心内观，信任直觉的指引。' },
+                { id:3,name:'皇后',en:'The Empress',emoji:'👸',keywords:['丰饶','母爱','创造','温暖','自然','收获','感情'],meaning:'皇后牌是丰饶与爱的象征。你正被温暖的能量环绕，适合孕育新计划、滋养关系、享受生活的美好。' },
+                { id:4,name:'皇帝',en:'The Emperor',emoji:'👑',keywords:['权威','秩序','稳定','掌控','结构','领导','纪律'],meaning:'皇帝牌代表秩序与掌控力。你需要以冷静的头脑和坚定的意志来面对局势，建立稳固的基础。' },
+                { id:5,name:'教皇',en:'The Hierophant',emoji:'📿',keywords:['传统','指引','学习','信仰','规则','导师','智慧'],meaning:'教皇牌暗示你可以从传统或导师处获得指引。遵循内心的信仰体系，寻求有经验者的帮助。' },
+                { id:6,name:'恋人',en:'The Lovers',emoji:'💕',keywords:['选择','爱情','关系','和谐','决定','信任','沟通'],meaning:'恋人牌关乎重要的抉择，尤其在感情与价值观层面。请做出忠于内心的选择，真诚的沟通是关键。' },
+                { id:7,name:'战车',en:'The Chariot',emoji:'🏇',keywords:['胜利','意志','前进','克服','决心','突破','竞争'],meaning:'战车预示着你将凭借强大意志力克服障碍。保持专注，驾驭内心的矛盾，胜利就在前方。' },
+                { id:8,name:'力量',en:'Strength',emoji:'🦁',keywords:['勇气','坚韧','耐心','内在','克服','自信','温柔'],meaning:'力量牌彰显内在的坚韧与勇气。真正的力量来自温柔的爱与耐心，而非蛮力。相信你能优雅地化解困境。' },
+                { id:9,name:'隐士',en:'The Hermit',emoji:'🏮',keywords:['内省','独处','思考','智慧','沉淀','答案','指引'],meaning:'隐士提灯照亮内心之路。你需要暂时远离喧嚣，在宁静中寻找答案。智慧源自沉淀与反思。' },
+                { id:10,name:'命运之轮',en:'Wheel of Fortune',emoji:'🎡',keywords:['转折','运气','循环','改变','机遇','命运','时机'],meaning:'命运之轮正在转动，变化是唯一的常数。好运正在靠近，接受生命自然的节奏，顺势而为。' },
+                { id:11,name:'正义',en:'Justice',emoji:'⚖️',keywords:['公正','平衡','真相','责任','因果','决策','公平'],meaning:'正义牌提醒你诚实面对一切，承担应有的责任。真相终会浮现，公平的结果取决于你过往的选择。' },
+                { id:12,name:'倒吊人',en:'The Hanged Man',emoji:'🙃',keywords:['牺牲','换个角度','等待','放手','顿悟','暂停','奉献'],meaning:'倒吊人邀请你换个视角看世界。暂时的停滞并非坏事，在静默中你将获得全新的领悟。' },
+                { id:13,name:'死神',en:'Death',emoji:'💀',keywords:['结束','转变','重生','放下','新开始','蜕变','释怀'],meaning:'死神牌并非不祥之兆，它象征一个阶段的结束与新生。放下不再适合的旧模式，迎接蜕变与重生。' },
+                { id:14,name:'节制',en:'Temperance',emoji:'🌊',keywords:['平衡','调和','耐心','适度','融合','治愈','中庸'],meaning:'节制牌召唤你寻求生活的平衡点。避免极端，以温和耐心的态度调和各方面，你将找到内心的平静。' },
+                { id:15,name:'恶魔',en:'The Devil',emoji:'😈',keywords:['束缚','欲望','依赖','诱惑','执念','物质','阴影'],meaning:'恶魔牌揭示你内心的束缚与执念。审视那些让你上瘾或无法自由的事物，认识到改变的力量在于自己。' },
+                { id:16,name:'塔',en:'The Tower',emoji:'🗼',keywords:['崩塌','突变','释放','觉醒','冲击','重建','真相'],meaning:'塔牌预示着突如其来的改变，旧结构将被打破。虽然震撼，但这也是解放与重建的契机。' },
+                { id:17,name:'星星',en:'The Star',emoji:'⭐',keywords:['希望','治愈','灵感','平静','未来','梦想','信念'],meaning:'星星是夜空中最温柔的指引。疗愈正在进行中，请怀抱希望，相信未来充满光明与可能。' },
+                { id:18,name:'月亮',en:'The Moon',emoji:'🌙',keywords:['困惑','迷茫','恐惧','直觉','潜意识','未知','梦境'],meaning:'月亮牌揭示内心的隐忧与不确定。迷雾之中请相信直觉的微光，有些答案将在时间中清晰。' },
+                { id:19,name:'太阳',en:'The Sun',emoji:'☀️',keywords:['快乐','成功','光明','希望','活力','成就','喜悦'],meaning:'太阳牌带来最明亮的祝福！成功与喜悦正照耀着你，享受这灿烂的时光，大胆前行。' },
+                { id:20,name:'审判',en:'Judgement',emoji:'📯',keywords:['觉醒','评估','召唤','重生','抉择','释怀','升华'],meaning:'审判牌是内心觉醒的时刻。回顾过往，做出重要的评估与抉择，你将被召唤至更高的境界。' },
+                { id:21,name:'世界',en:'The World',emoji:'🌍',keywords:['完成','圆满','实现','旅程','成功','整合','庆祝'],meaning:'世界牌象征一个周期的圆满结束。你已完成了一段重要的旅程，收获满满，值得庆祝与感恩。' },
+            ];
+
+            // ============ 构建牌堆 ============
+            function buildCardPile() {
+                cardPileContainer.innerHTML = '<div class="pile-glow"></div>';
+                const pileCount = 10;
+                for (let i = 0; i < pileCount; i++) {
+                    const card = document.createElement('div');
+                    card.className = 'pile-card';
+                    const angle = (i - pileCount / 2 + 0.5) * 4.2;
+                    const offsetY = Math.abs(i - pileCount / 2) * 3;
+                    card.style.transform = `rotate(${angle}deg) translateY(${offsetY}px)`;
+                    card.style.zIndex = pileCount - Math.abs(i - Math.floor(pileCount / 2));
+                    card.style.opacity = 0.75 + (1 - Math.abs(i - pileCount / 2) / (pileCount / 2)) * 0.25;
+                    card.innerHTML = `<div class="card-back-design"><span class="star-main">✦</span><span class="moon-small">🌙 TAROT</span></div>`;
+                    cardPileContainer.appendChild(card);
+                }
+            }
+
+            // ============ 抽牌逻辑 ============
+            const positionNames = ['past','present','future'];
+            const positionLabels = ['🌅 过去','🌞 现在','🌙 未来'];
+            const positionSlotEls = [slotPast, slotPresent, slotFuture];
+            let availableDeck = [];
+            let isDrawing = false;
+
+            function initDraw() {
+                drawCount = 0;
+                drawnCards = [];
+                availableDeck = [...tarotDeck];
+                isDrawing = false;
+                buildCardPile();
+                drawHint.textContent = '👆 点击牌堆抽取第一张牌';
+                drawCounter.textContent = '剩余抽取：3 张';
+                readingArea.classList.add('hidden');
+                readingArea.innerHTML = '';
+                drawActions.classList.add('hidden');
+                positionSlotEls.forEach(slot => {
+                    slot.classList.remove('filled');
+                    slot.innerHTML = `<span class="slot-label">${slot.querySelector('.slot-label')?.textContent || ''}</span><span style="font-size:1.4rem;opacity:0.3;">🃏</span>`;
+                });
+                cardPileContainer.style.pointerEvents = 'auto';
+                cardPileContainer.onclick = handleDrawClick;
+            }
+
+            function handleDrawClick(e) {
+                if (isDrawing || drawCount >= 3) return;
+                isDrawing = true;
+                cardPileContainer.style.pointerEvents = 'none';
+
+                const randomIndex = Math.floor(Math.random() * availableDeck.length);
+                const chosenCard = availableDeck.splice(randomIndex, 1)[0];
+                const isReversed = Math.random() < 0.5;
+                drawnCards.push({ cardData: chosenCard, isReversed, position: positionNames[drawCount] });
+                drawCount++;
+
+                const pileRect = cardPileContainer.getBoundingClientRect();
+                const flyingCard = document.createElement('div');
+                flyingCard.className = 'flying-card';
+                flyingCard.style.left = pileRect.left + pileRect.width / 2 - 55 + 'px';
+                flyingCard.style.top = pileRect.top + pileRect.height / 2 - 85 + 'px';
+                flyingCard.style.background = '#1a0e30';
+                flyingCard.style.border = '2px solid var(--gold-dim)';
+                flyingCard.innerHTML = '<div class="card-back-design"><span class="star-main">✦</span></div>';
+                document.body.appendChild(flyingCard);
+
+                setTimeout(() => { flyingCard.classList.add('flipping'); }, 50);
+                setTimeout(() => {
+                    flyingCard.style.background = isReversed ? 'linear-gradient(180deg, #2a1840, #1a0e30)' : 'linear-gradient(180deg, #1e1035, #2a1840)';
+                    flyingCard.style.border = '2px solid var(--gold-light)';
+                    flyingCard.innerHTML = `<div style="text-align:center;${isReversed ? 'transform:rotate(180deg);' : ''}"><span style="font-size:2.4rem;display:block;">${chosenCard.emoji}</span><span style="font-size:0.65rem;color:var(--gold-light);display:block;">${chosenCard.name}</span>${isReversed ? '<span style="font-size:0.45rem;color:#c08090;">↺ 逆位</span>' : '<span style="font-size:0.45rem;color:var(--gold-dim);">↑ 正位</span>'}</div>`;
+                }, 400);
+                setTimeout(() => {
+                    const targetSlot = positionSlotEls[drawCount - 1];
+                    const slotRect = targetSlot.getBoundingClientRect();
+                    flyingCard.style.left = slotRect.left + slotRect.width / 2 - 55 + 'px';
+                    flyingCard.style.top = slotRect.top + slotRect.height / 2 - 85 + 'px';
+                    flyingCard.style.transform = 'scale(0.7)';
+                    flyingCard.style.opacity = '0.9';
+                }, 750);
+                setTimeout(() => {
+                    flyingCard.remove();
+                    const targetSlot = positionSlotEls[drawCount - 1];
+                    targetSlot.classList.add('filled');
+                    targetSlot.innerHTML = `<span class="slot-label">${positionLabels[drawCount - 1]}</span><span class="slot-card-emoji" style="${isReversed ? 'transform:rotate(180deg);display:block;' : 'display:block;'}">${chosenCard.emoji}</span><span class="slot-card-name">${chosenCard.name}${isReversed ? ' ↺' : ''}</span>${isReversed ? '<span class="reversed-tag">逆位</span>' : ''}`;
+                    buildCardPile();
+                    if (drawCount < 3) {
+                        drawHint.textContent = `👆 点击牌堆抽取第${drawCount + 1}张牌`;
+                        drawCounter.textContent = `剩余抽取：${3 - drawCount} 张`;
+                        cardPileContainer.style.pointerEvents = 'auto';
+                        cardPileContainer.onclick = handleDrawClick;
+                        isDrawing = false;
+                    } else {
+                        drawHint.textContent = '✨ 三张牌已抽取完毕';
+                        drawCounter.textContent = '牌灵正在解读...';
+                        cardPileContainer.style.pointerEvents = 'none';
+                        cardPileContainer.onclick = null;
+                        isDrawing = false;
+                        setTimeout(generateReading, 800);
+                    }
+                }, 1100);
+            }
+
+            // ============ 生成三牌阵解读 ============
+            function generateReading() {
+                const question = userInfo.question || '你的问题';
+                const pastCard = drawnCards[0];
+                const presentCard = drawnCards[1];
+                const futureCard = drawnCards[2];
+
+                const pastName = pastCard.cardData.name + (pastCard.isReversed ? '(逆位)' : '(正位)');
+                const presentName = presentCard.cardData.name + (presentCard.isReversed ? '(逆位)' : '(正位)');
+                const futureName = futureCard.cardData.name + (futureCard.isReversed ? '(逆位)' : '(正位)');
+
+                let reading = '';
+                reading += `亲爱的求问者，关于「${question}」，牌灵为你抽取了三张牌，分别映照你的过去、现在与未来。\n\n`;
+                reading += `🌅【过去】${pastName}\n${pastCard.isReversed ? '逆位的'+pastCard.cardData.name+'提示你，过去可能存在'+pastCard.cardData.keywords.slice(0,3).join('、')+'方面的阻滞或内在挣扎。' : pastCard.cardData.meaning}\n\n`;
+                reading += `🌞【现在】${presentName}\n${presentCard.isReversed ? '逆位的'+presentCard.cardData.name+'暗示当前在'+presentCard.cardData.keywords.slice(0,3).join('、')+'方面需要更多觉察与调整。' : presentCard.cardData.meaning}\n\n`;
+                reading += `🌙【未来】${futureName}\n${futureCard.isReversed ? '逆位的'+futureCard.cardData.name+'提醒你未来需留意'+futureCard.cardData.keywords.slice(0,3).join('、')+'相关议题，避免走向反面。' : futureCard.cardData.meaning}\n\n`;
+                reading += `💫 综合来看，这三张牌共同指向一个核心启示：你的旅程从过去延续至今，正走向一个需要你用心体悟的未来。请结合牌灵的寄语，找到属于你的答案。`;
+
+                readingArea.innerHTML = `<div class="reading-title">🔮 牌灵的完整解读</div><div style="white-space:pre-line;">${reading}</div>`;
+                readingArea.classList.remove('hidden');
+                drawActions.classList.remove('hidden');
+                chatHistory = [{ role: 'ai', content: reading }];
+
+                // 存储本次解读内容供“查看上次解读”使用
+                lastSession = { content: reading };
+                btnLastReading.classList.remove('hidden');
+
+                document.getElementById('btnFollowUpDraw').onclick = startFollowUpFromDraw;
+                document.getElementById('btnFarewellDraw').onclick = executeFarewellFromDraw;
+            }
+
+            function startFollowUpFromDraw() {
+                chatArea.innerHTML = '';
+                chatHistory.forEach(msg => addChatBubble(msg.role, msg.content));
+                switchPage(chatPage);
+                showFollowUpInput();
+            }
+
+            function executeFarewellFromDraw() { executeFarewell(); }
+
+            // ============ 追问系统（接入 DeepSeek） ============
+            function showFollowUpInput() {
+                chatActions.innerHTML = `
+                    <div class="input-group" style="margin-bottom:8px;">
+                        <textarea class="input-field" id="inputFollowUp" placeholder="输入你想追问的内容..." maxlength="300" style="min-height:55px;"></textarea>
+                        <div class="error-hint" id="errorFollowUp"></div>
+                    </div>
+                    <div class="btn-row">
+                        <button class="btn-glow" id="btnSendFollowUp">✨ 发送追问</button>
+                        <button class="btn-glow" id="btnCancelFollowUp">🌙 告别牌灵</button>
+                    </div>`;
+                const inputEl = document.getElementById('inputFollowUp');
+                setTimeout(() => inputEl?.focus(), 300);
+                document.getElementById('btnSendFollowUp').onclick = submitFollowUp;
+                document.getElementById('btnCancelFollowUp').onclick = executeFarewell;
+                inputEl?.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitFollowUp(); }
+                });
+            }
+
+            async function submitFollowUp() {
+                const inputEl = document.getElementById('inputFollowUp');
+                const errorEl = document.getElementById('errorFollowUp');
+                if (!inputEl) return;
+                const value = inputEl.value.trim();
+                const validationError = validateSimple(value, 'question');
+                if (validationError) {
+                    if (errorEl) { errorEl.textContent = validationError; errorEl.classList.add('show'); }
+                    inputEl.classList.add('error-shake');
+                    setTimeout(() => { inputEl.classList.remove('error-shake'); if (errorEl) errorEl.classList.remove('show'); }, 2000);
+                    return;
+                }
+                if (errorEl) errorEl.classList.remove('show');
+
+                addChatBubble('user', value);
+                chatHistory.push({ role: 'user', content: value });
+
+                const thinkingBubble = addChatBubble('ai', '✨ 牌灵思考中...');
+                chatArea.scrollTop = chatArea.scrollHeight;
+
+                const sendBtn = document.getElementById('btnSendFollowUp');
+                if (sendBtn) sendBtn.disabled = true;
+                inputEl.disabled = true;
+
+                try {
+                    const systemPrompt = `你是一个温柔的塔罗牌灵“皇后”，已经为用户抽取了三张牌：
+- 过去：${drawnCards[0]?.cardData.name}${drawnCards[0]?.isReversed ? '（逆位）' : '（正位）'}
+- 现在：${drawnCards[1]?.cardData.name}${drawnCards[1]?.isReversed ? '（逆位）' : '（正位）'}
+- 未来：${drawnCards[2]?.cardData.name}${drawnCards[2]?.isReversed ? '（逆位）' : '（正位）'}
+用户的问题：${userInfo.question}
+
+请根据牌阵意义，用富有诗意和同理心的方式回答用户新的追问，引导用户内省。`;
+
+                    const messages = [
+                        { role: 'system', content: systemPrompt },
+                        ...chatHistory.filter(m => m.role === 'user' || m.role === 'ai')
+                    ];
+
+                    const data = await callDeepSeekAPI(messages);
+                    thinkingBubble.remove();
+
+                    if (data.choices && data.choices[0] && data.choices[0].message) {
+                        const aiReply = data.choices[0].message.content.trim();
+                        addChatBubble('ai', aiReply);
+                        chatHistory.push({ role: 'ai', content: aiReply });
+                    } else {
+                        addChatBubble('ai', '🌙 牌灵陷入了沉思...请再问一次吧。');
+                        chatHistory.push({ role: 'ai', content: '牌灵陷入沉思...' });
+                    }
+                } catch (error) {
+                    thinkingBubble.remove();
+                    console.error('AI 请求失败:', error);
+                    addChatBubble('ai', '🌙 牌灵暂时没有回应，请稍后再试...');
+                    chatHistory.push({ role: 'ai', content: '抱歉，牌灵暂时无法回应。' });
+                }
+
+                if (sendBtn) sendBtn.disabled = false;
+                inputEl.disabled = false;
+                inputEl.value = '';
+                inputEl.focus();
+                chatArea.scrollTop = chatArea.scrollHeight;
+                showChoiceButtonsInChat();
+            }
+
+            function showChoiceButtonsInChat() {
+                chatActions.innerHTML = `
+                    <div class="btn-row">
+                        <button class="btn-glow" id="btnFollowUpChat"><span class="btn-icon">💬</span> 继续追问</button>
+                        <button class="btn-glow" id="btnFarewellChat"><span class="btn-icon">🌙</span> 告别牌灵</button>
+                    </div>`;
+                document.getElementById('btnFollowUpChat').onclick = showFollowUpInput;
+                document.getElementById('btnFarewellChat').onclick = executeFarewell;
+            }
+
+            function addChatBubble(role, content) {
+                const bubble = document.createElement('div');
+                bubble.className = 'chat-bubble ' + (role === 'ai' ? 'ai' : 'user');
+                const label = role === 'ai' ? '👸 牌灵' : '💭 你';
+                bubble.innerHTML = `<span class="bubble-label">${label}</span>${content.replace(/\n/g, '<br>')}`;
+                chatArea.appendChild(bubble);
+                chatArea.scrollTop = chatArea.scrollHeight;
+                return bubble;
+            }
+
+            // ============ 告别 ============
+            function executeFarewell() {
+                const messages = [
+                    { text: '愿星光永远照亮你前行的路。✨\n记得，你内心的力量远比任何牌面都强大。', emoji: '🌟' },
+                    { text: '皇后牌灵会一直守护着你。👸\n无论你走到哪里，温柔与丰饶都与你同在。', emoji: '💫' },
+                    { text: '每一次告别都是为了更好的重逢。🌙\n请带着牌灵的祝福，勇敢地走下去吧。', emoji: '🌹' },
+                    { text: '你已经拥有了所有答案的种子。🌿\n只需静待花开，一切都会如你所愿。', emoji: '🌸' },
+                    { text: '感谢你信任牌灵的指引。🔮\n记住今天获得的启示，它们会在你需要时再次浮现。', emoji: '🕯️' },
+                ];
+                const chosen = messages[Math.floor(Math.random() * messages.length)];
+                hasActiveSession = false;
+                chatHistory = [];
+                drawnCards = [];
+                showFarewell(chosen.text, chosen.emoji);
+            }
+
+            function showFarewell(message, emoji) {
+                farewellText.textContent = message;
+                farewellEmoji.textContent = emoji || '💫';
+                farewellOverlay.classList.remove('hidden');
+            }
+
+            function hideFarewell() {
+                farewellOverlay.classList.add('hidden');
+            }
+
+            // ============ 敏感词检测 ============
+            const sensitiveWords = ['暴力','杀人','自杀','毒品','赌博','诈骗','色情','武器','恐怖','违法','犯罪','攻击','辱骂','诅咒','fuck','shit','kill','die','hate'];
+            function containsSensitive(text) {
+                const lower = text.toLowerCase();
+                for (const word of sensitiveWords) {
+                    if (lower.includes(word)) return true;
+                }
+                return false;
+            }
+            function validateSimple(value, fieldName) {
+                const trimmed = value.trim();
+                if (!trimmed) return '请填写此项内容';
+                if (containsSensitive(trimmed)) return '内容包含不合适的话题，请修改';
+                if (fieldName === 'question' && trimmed.length < 2) return '问题太短，请多说一点';
+                return null;
+            }
+
+            // ============ 按钮事件 ============
+            document.getElementById('btnSummon').addEventListener('click', () => {
+                switchPage(inputPage);
+                setTimeout(() => document.getElementById('inputGender').focus(), 500);
+            });
+
+            document.getElementById('btnFarewellHome').addEventListener('click', () => {
+                if (hasActiveSession) {
+                    executeFarewell();
+                } else {
+                    showFarewell('牌灵尚未被召唤呢～\n请先召唤牌灵，与我对话后再告别吧。✨', '🌙');
+                    setTimeout(() => hideFarewell(), 3500);
+                }
+            });
+
+            document.getElementById('btnBackHome').addEventListener('click', () => {
+                switchPage(homePage);
+                errorGlobal.classList.remove('show');
+            });
+
+            document.getElementById('btnConfirm').addEventListener('click', () => {
+                const gender = document.getElementById('inputGender').value.trim();
+                const birthday = document.getElementById('inputBirthday').value.trim();
+                const question = document.getElementById('inputQuestion').value.trim();
+                errorGlobal.classList.remove('show');
+
+                let err = validateSimple(gender, 'gender');
+                if (!err) err = validateSimple(birthday, 'birthday');
+                if (!err) err = validateSimple(question, 'question');
+
+                if (err) {
+                    errorGlobal.textContent = err;
+                    errorGlobal.classList.add('show');
+                    return;
+                }
+
+                userInfo = { gender, birthday, question };
+                hasActiveSession = true;
+                initDraw();
+                switchPage(drawPage);
+            });
+
+            btnFarewellClose.addEventListener('click', () => {
+                hideFarewell();
+                // 刷新到召唤页面
+                chatArea.innerHTML = '';
+                chatActions.innerHTML = '';
+                hasActiveSession = false;
+                chatHistory = [];
+                drawnCards = [];
+                switchPage(homePage);
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !farewellOverlay.classList.contains('hidden')) hideFarewell();
+            });
+
+            // ============ 初始化 ============
+            createTarotBackground();
+            buildCardPile();
+            console.log('🔮 阿布的塔罗 · 已接入 DeepSeek · 声明已就绪');
+        })();
+    </script>
+</body>
+</html>
